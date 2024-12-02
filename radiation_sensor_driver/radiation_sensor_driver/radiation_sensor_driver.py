@@ -17,6 +17,7 @@ import struct
 import serial
 import binascii
 import rclpy
+import time
 from rclpy.node import Node
 
 from radiation_msgs.msg import Radiation
@@ -39,15 +40,25 @@ class RadiationSensorDriver(Node):
         self.radiation_pub = self.create_publisher(Radiation, "radiation", 10)
 
         # Serial connection setup
+        self.wait_for_serial_and_setup()
+
+        self.get_logger().info("Radiation sensor driver initialized.")
+
+    def wait_for_serial_and_setup(self):
+        while not self.setup_usb():
+            self.get_logger().warn(f"Trying to connect to USB device {self.serial_port}...")
+            time.sleep(1)
+
+    def setup_usb(self):
         try:
             self.ser = serial.Serial(self.serial_port, self.baud_rate, timeout=1)
             self.get_logger().info(f"Connected to {self.serial_port}")
             self.timer = self.create_timer(0.1, self.read_serial_data)
+            return True
         except serial.SerialException as e:
             self.get_logger().error(f"Serial error: {e}")
-            raise e
 
-        self.get_logger().info("Radiation sensor driver initialized.")
+        return False
 
     def calculate_crc32(self, data):
         """CRC32 with padding to 32-bit boundary."""
@@ -78,6 +89,12 @@ class RadiationSensorDriver(Node):
             ratiation_msg.dose = siverts
 
             self.radiation_pub.publish(ratiation_msg)
+
+        except serial.SerialException as e:
+            self.get_logger().error(f"Serial error: {e}")
+            self.ser.close()
+            self.timer.cancel()
+            self.wait_for_serial_and_setup()
 
         except ValueError as e:
             self.get_logger().error(f"Error: {e}")
