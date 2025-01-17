@@ -1,5 +1,5 @@
 # radiation_sensor_ros
-ROS 2 driver for BG51 Radiation Sensor
+ROS 2 driver for [BG51 Radiation Sensor](https://www.teviso.com/file/pdf/bg51-data-specification.pdf)
 
 
 ## How to Build a ROS 2 Workspace Using `colcon`
